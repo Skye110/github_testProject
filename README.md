@@ -15,6 +15,13 @@ A web-based route finding application that compares different pathfinding algori
 ### 1. Install Dependencies
 
 ```bash
+python -m venv .venv
+.venv\Scripts\activate
+
+pip install -r requirements.txt
+
+
+
 pip install flask geopandas shapely pyproj
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
