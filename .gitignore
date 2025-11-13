@@ -37,4 +37,9 @@ config_local.py
 Thumbs.db
 
 # Logs
-*.log
+*.logvenv/ 
+.venv/ 
+__pycache__/ 
+*.pyc 
+*.pyo 
+*.egg-info/ 
