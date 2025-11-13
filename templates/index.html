@@ -2,8 +2,8 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8" />
-<title>UB Route Finder — Traffic Flow</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<title>UB Route Finder – Traffic Flow</title>
+<link rel="stylesheet" href="/static/style.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -15,12 +15,15 @@
     <h2>🗺️ Алгоритм Харьцуулах</h2>
 
     <div class="control-group">
-        <label for="algSelect">Алгоритм</label>
+        <label for="algSelect">Алгоритм сонгох</label>
         <select id="algSelect">
-            <option value="dijkstra">Dijkstra</option>
-            <option value="bfs">BFS</option>
-            <option value="dfs">DFS</option>
+            <option value="dijkstra">Dijkstra - Хамгийн богино зам</option>
+            <option value="bfs">BFS - Цөөн алхамтай</option>
+            <option value="dfs">DFS - Хурдан олох</option>
         </select>
+        <small style="color: #90caf9; font-size: 11px; margin-top: 4px; display: block;">
+            💡 Dijkstra: Метрээр хамгийн богино | BFS: Цөөн уулзвар | DFS: Ямар ч зам
+        </small>
     </div>
 
     <div class="control-group">
@@ -28,13 +31,21 @@
             <input type="checkbox" id="trafficToggle" style="width: auto; cursor: pointer;">
             <span>🚦 Замын хөдөлгөөний ачааллыг тооцох</span>
         </label>
-        <small style="color: #90caf9; font-size: 11px; margin-top: 4px; display: block;">
-            Идэвхжүүлсэн үед зарим зам илүү удаан болно
-        </small>
+    </div>
+
+    <div class="control-group" id="trafficControls" style="display: none;">
+        <label for="timeSelect">🕐 Цагийн сонголт</label>
+        <select id="timeSelect">
+            <option value="-1">Одоогийн цаг</option>
+            <option value="8">08:00 - Өглөөний завгүй цаг</option>
+            <option value="12">12:00 - Өдрийн цаг</option>
+            <option value="18">18:00 - Оройн завгүй цаг</option>
+            <option value="22">22:00 - Шөнийн цаг</option>
+        </select>
     </div>
 
     <div class="button-group">
-        <button id="runReplace" class="btn-primary">▶️ Гүйцэтгэх</button>
+        <button id="runReplace" class="btn-primary">▶️ Дүйцэтгэх</button>
         <button id="compare" class="btn-success">⚖️ Харьцуулах (3 алгоритм)</button>
         <button id="clear" class="btn-danger">🗑️ Цэвэрлэх</button>
     </div>
@@ -45,7 +56,7 @@
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
-            <div id="progressText" style="font-size: 12px; margin-top: 4px; text-align: center;"></div>
+            <div id="progressText"></div>
         </div>
     </div>
 
@@ -55,13 +66,21 @@
     </div>
 
     <div class="panel-block">
-        <h4>⏱️ Гүйцэтгэлийн харьцуулалт</h4>
+        <h4>⏱️ Дүйцэтгэлийн харьцуулалт</h4>
         <canvas id="perfChart" width="280" height="140"></canvas>
+    </div>
+
+    <div class="panel-block">
+        <h4>ℹ️ Алгоритмын тайлбар</h4>
+        <div style="font-size: 12px; line-height: 1.6; color: #d3e8ff;">
+            <p><strong>Dijkstra:</strong> Хамгийн богино замыг олно (метр)</p>
+            <p><strong>BFS:</strong> Хамгийн цөөн уулзвартай</p>
+            <p><strong>DFS:</strong> Хурдан ямар ч замыг олно</p>
+        </div>
     </div>
 </div>
 
 <script>
-/* Map initialization */
 const map = L.map('map').setView([47.918, 106.917], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
     maxZoom: 18,
@@ -71,7 +90,15 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let markers = [];
 let routeLayers = {};
 let resultsStore = {};
-const palette = ['#e6194b','#3cb44b','#ffe119','#4363d8','#f58231','#911eb4','#46f0f0','#f032e6','#d2f53c','#fabebe'];
+
+const algorithmNames = {
+    'dijkstra': 'Dijkstra',
+    'bfs': 'BFS',
+    'dfs': 'DFS',
+    'Dijkstra': 'Dijkstra',
+    'BFS': 'BFS',
+    'DFS': 'DFS'
+};
 
 function colorForAlg(alg) {
     const colors = {
@@ -79,55 +106,25 @@ function colorForAlg(alg) {
         'BFS': '#3498db',
         'DFS': '#2ecc71'
     };
-    return colors[alg] || palette[Math.floor(Math.random() * palette.length)];
+    return colors[alg] || '#888';
 }
 
-/* Chart.js - Performance comparison chart */
+document.getElementById('trafficToggle').onchange = function() {
+    document.getElementById('trafficControls').style.display = this.checked ? 'block' : 'none';
+};
+
 const ctx = document.getElementById('perfChart').getContext('2d');
 const chart = new Chart(ctx, { 
     type: 'bar', 
-    data: { 
-        labels: [], 
-        datasets: [{ 
-            label: 'Гүйцэтгэх хугацаа (ms)', 
-            data: [], 
-            backgroundColor: [] 
-        }] 
-    }, 
+    data: { labels: [], datasets: [{ label: 'Хугацаа (ms)', data: [], backgroundColor: [] }] }, 
     options: { 
         responsive: true, 
         maintainAspectRatio: false,
         scales: { 
-            y: { 
-                beginAtZero: true,
-                title: { display: true, text: 'Цаг (миллисекунд)', color: '#d3e8ff' },
-                ticks: { color: '#d3e8ff' },
-                grid: { color: 'rgba(255,255,255,0.1)' }
-            },
-            x: {
-                ticks: { color: '#d3e8ff' },
-                grid: { color: 'rgba(255,255,255,0.1)' }
-            }
+            y: { beginAtZero: true, title: { display: true, text: 'мс', color: '#d3e8ff' }, ticks: { color: '#d3e8ff' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+            x: { ticks: { color: '#d3e8ff' }, grid: { color: 'rgba(255,255,255,0.1)' } }
         },
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                callbacks: {
-                    label: function(context) {
-                        const alg = context.label;
-                        const r = resultsStore[alg];
-                        if(r) {
-                            let info = `${context.parsed.y}ms`;
-                            if(r.steps) info += ` | ${r.steps} алхам`;
-                            if(r.distance) info += ` | ${Math.round(r.distance)}м`;
-                            if(r.travel_time) info += ` | 🚦${Math.round(r.travel_time)}`;
-                            return info;
-                        }
-                        return `${context.parsed.y}ms`;
-                    }
-                }
-            }
-        }
+        plugins: { legend: { display: false } }
     } 
 });
 
@@ -139,390 +136,146 @@ function updateChartFromStore() {
     chart.update();
 }
 
-/* Progress indicator */
 function showProgress(text) {
     document.getElementById('progress').style.display = 'block';
     document.getElementById('progressText').innerText = text;
     let width = 0;
     const fill = document.getElementById('progressFill');
-    const interval = setInterval(() => {
-        width += 5;
-        if(width > 90) width = 90;
-        fill.style.width = width + '%';
-    }, 300);
+    const interval = setInterval(() => { width += 5; if(width > 90) width = 90; fill.style.width = width + '%'; }, 300);
     return interval;
 }
 
 function hideProgress(interval) {
     clearInterval(interval);
-    const fill = document.getElementById('progressFill');
-    fill.style.width = '100%';
-    setTimeout(() => {
-        document.getElementById('progress').style.display = 'none';
-        fill.style.width = '0%';
-    }, 500);
+    document.getElementById('progressFill').style.width = '100%';
+    setTimeout(() => { document.getElementById('progress').style.display = 'none'; document.getElementById('progressFill').style.width = '0%'; }, 500);
 }
 
-/* Marker behavior */
 function addMarker(latlng, label) {
     const icon = label === 'Эхлэл' ? '🟢' : '🔴';
     const m = L.marker(latlng, {
-        icon: L.divIcon({
-            className: 'custom-marker',
-            html: `<div style="font-size: 24px;">${icon}</div>`,
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
-        })
+        icon: L.divIcon({ className: 'custom-marker', html: `<div style="font-size: 24px;">${icon}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] })
     }).addTo(map).bindPopup(`<b>${label}</b>`).openPopup();
     markers.push(m);
 }
 
 map.on('click', e => {
-    if(markers.length === 0) {
-        addMarker(e.latlng, 'Эхлэл');
-        document.getElementById('result').innerText = '✅ Эхлэл байрлуулсан. Төгсгөл сонгоно уу.';
-        return;
-    }
-    if(markers.length === 1) {
-        addMarker(e.latlng, 'Төгсгөл');
-        document.getElementById('result').innerText = '✅ Төгсгөл байрлуулсан. "Гүйцэтгэх" дарна уу.';
-        return;
-    }
-    // Clear and start new pair
-    markers.forEach(m => map.removeLayer(m)); 
-    markers = []; 
-    addMarker(e.latlng, 'Эхлэл');
-    document.getElementById('result').innerText = '🔄 Шинэ эхлэл байрлуулсан. Төгсгөл сонгоно уу.';
+    if(markers.length === 0) { addMarker(e.latlng, 'Эхлэл'); document.getElementById('result').innerText = '✅ Эхлэл. Төгсгөл сонгоно уу.'; return; }
+    if(markers.length === 1) { addMarker(e.latlng, 'Төгсгөл'); document.getElementById('result').innerText = '✅ Төгсгөл. "Дүйцэтгэх" дарна уу.'; return; }
+    markers.forEach(m => map.removeLayer(m)); markers = []; addMarker(e.latlng, 'Эхлэл'); document.getElementById('result').innerText = '🔄 Шинэ эхлэл. Төгсгөл сонгоно уу.';
 });
 
-/* Render saved list */
 function renderSavedList() {
-    const box = document.getElementById('savedList'); 
-    box.innerHTML = '';
+    const box = document.getElementById('savedList'); box.innerHTML = '';
     const keys = Object.keys(resultsStore);
-
-    if(keys.length === 0) { 
-        box.innerHTML = '<div style="color: #888; text-align: center; padding: 12px;">Хадгалсан үр дүн алга</div>'; 
-        return; 
-    }
-
+    if(keys.length === 0) { box.innerHTML = '<div style="color: #888; text-align: center; padding: 12px;">Хадгалсан үр дүн алга</div>'; return; }
     keys.forEach(alg => {
         const r = resultsStore[alg];
-        const row = document.createElement('div'); 
-        row.className = 'saved-row';
-        
+        const row = document.createElement('div'); row.className = 'saved-row';
         const timeText = r.time ? `⏱️ ${r.time}ms` : '';
         const distText = r.distance ? ` | 📏 ${Math.round(r.distance)}м` : '';
         const stepsText = r.steps ? ` | 👣 ${r.steps}` : '';
-        const trafficText = r.traffic && r.travel_time ? ` | 🚦 ${Math.round(r.travel_time)}` : '';
-        
-        row.innerHTML = `
-            <div class="saved-left">
-                <span class="swatch" style="background:${r.color}"></span>
-                <div>
-                    <div class="lbl">${alg}${r.traffic ? ' 🚦' : ''}</div>
-                    <div class="meta">${timeText}${stepsText}${distText}${trafficText}</div>
-                </div>
-            </div>
-            <div class="saved-actions">
-                <button data-alg="${alg}" class="toggle-btn btn-sm">${r.visible ? '👁️ Нуух':'👁️ Харах'}</button>
-                <button data-alg="${alg}" class="delete-btn btn-sm">×</button>
-            </div>`;
+        row.innerHTML = `<div class="saved-left"><span class="swatch" style="background:${r.color}"></span><div><div class="lbl">${alg}${r.traffic ? ' 🚦' : ''}</div><div class="meta">${timeText}${stepsText}${distText}</div></div></div><div class="saved-actions"><button data-alg="${alg}" class="toggle-btn btn-sm">${r.visible ? '👁️ Нуух':'👁️ Харах'}</button><button data-alg="${alg}" class="delete-btn btn-sm">×</button></div>`;
         box.appendChild(row);
     });
-
-    box.querySelectorAll('.toggle-btn').forEach(btn => {
-        btn.onclick = e => {
-            const alg = e.target.dataset.alg;
-            resultsStore[alg].visible = !resultsStore[alg].visible;
-            e.target.innerText = resultsStore[alg].visible ? '👁️ Нуух':'👁️ Харах';
-            redrawAllVisible();
-        };
-    });
-
-    box.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.onclick = e => {
-            const alg = e.target.dataset.alg;
-            if(routeLayers[alg]) routeLayers[alg].forEach(l => map.removeLayer(l));
-            delete routeLayers[alg];
-            delete resultsStore[alg];
-            renderSavedList();
-            updateChartFromStore();
-        };
-    });
+    box.querySelectorAll('.toggle-btn').forEach(btn => { btn.onclick = e => { const alg = e.target.dataset.alg; resultsStore[alg].visible = !resultsStore[alg].visible; e.target.innerText = resultsStore[alg].visible ? '👁️ Нуух':'👁️ Харах'; redrawAllVisible(); }; });
+    box.querySelectorAll('.delete-btn').forEach(btn => { btn.onclick = e => { const alg = e.target.dataset.alg; if(routeLayers[alg]) routeLayers[alg].forEach(l => map.removeLayer(l)); delete routeLayers[alg]; delete resultsStore[alg]; renderSavedList(); updateChartFromStore(); }; });
 }
 
-/* Draw visible routes with directional arrows */
 function redrawAllVisible() {
-    // Clear all existing routes
-    for(const alg in routeLayers) {
-        routeLayers[alg].forEach(l => map.removeLayer(l));
-    }
+    for(const alg in routeLayers) { routeLayers[alg].forEach(l => map.removeLayer(l)); }
     routeLayers = {};
-
     for(const alg in resultsStore) {
         if(!resultsStore[alg].visible) continue;
         const r = resultsStore[alg];
-        
         if(!r.path || r.path.length === 0) continue;
-        
         routeLayers[alg] = [];
-        
         const latlngs = r.path.map(pt => [pt[1], pt[0]]);
-        
-        // Main polyline
-        const poly = L.polyline(latlngs, { 
-            color: r.color, 
-            weight: 5,
-            opacity: 0.8
-        }).addTo(map);
-        
-        // Add directional arrows to show traffic flow
-        addDirectionalArrows(latlngs, r.color, alg);
-        
-        // Popup with path info
-        const timeInfo = r.time ? `<br>⏱️ Хугацаа: <strong>${r.time}ms</strong>` : '';
-        const distInfo = r.distance ? `<br>📏 Зай: <strong>${Math.round(r.distance)}м</strong>` : '';
-        const trafficInfo = r.traffic && r.travel_time ? `<br>🚦 Замын хөдөлгөөн: <strong>${Math.round(r.travel_time)}</strong>` : '';
-        poly.bindPopup(`
-            <b>${alg}${r.traffic ? ' 🚦' : ''}</b>
-            ${timeInfo}
-            ${distInfo}
-            ${trafficInfo}
-            <br>👣 Алхамууд: ${r.steps}
-        `);
-        
+        const poly = L.polyline(latlngs, { color: r.color, weight: 5, opacity: 0.8 }).addTo(map);
+        const info = `<b>${alg}</b>${r.time ? `<br>⏱️ ${r.time}ms` : ''}${r.distance ? `<br>📏 ${Math.round(r.distance)}м` : ''}<br>👣 ${r.steps}`;
+        poly.bindPopup(info);
         routeLayers[alg].push(poly);
-        
-        // Start marker
-        routeLayers[alg].push(
-            L.circleMarker(latlngs[0], { 
-                radius: 7, 
-                fillColor: '#2ecc71', 
-                color: '#fff', 
-                weight: 2, 
-                fillOpacity: 1 
-            }).addTo(map).bindPopup('🟢 Эхлэл')
-        );
-        
-        // End marker
-        routeLayers[alg].push(
-            L.circleMarker(latlngs[latlngs.length-1], { 
-                radius: 7, 
-                fillColor: '#e74c3c', 
-                color: '#fff', 
-                weight: 2, 
-                fillOpacity: 1 
-            }).addTo(map).bindPopup('🔴 Төгсгөл')
-        );
+        routeLayers[alg].push(L.circleMarker(latlngs[0], { radius: 7, fillColor: '#2ecc71', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map));
+        routeLayers[alg].push(L.circleMarker(latlngs[latlngs.length-1], { radius: 7, fillColor: '#e74c3c', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map));
     }
 }
 
-/* Add directional arrows along the path */
-function addDirectionalArrows(latlngs, color, alg) {
-    // Add arrows every N segments to show direction
-    const arrowInterval = Math.max(1, Math.floor(latlngs.length / 8)); // Show ~8 arrows
-    
-    for(let i = arrowInterval; i < latlngs.length; i += arrowInterval) {
-        const from = latlngs[i - 1];
-        const to = latlngs[i];
-        
-        // Calculate angle between points
-        const angle = Math.atan2(to[0] - from[0], to[1] - from[1]) * (180 / Math.PI);
-        
-        // Create arrow marker at midpoint
-        const midpoint = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2];
-        
-        const arrowIcon = L.divIcon({
-            className: 'arrow-icon',
-            html: `<div style="
-                width: 0; 
-                height: 0; 
-                border-left: 6px solid transparent;
-                border-right: 6px solid transparent;
-                border-bottom: 12px solid ${color};
-                transform: rotate(${angle}deg);
-                transform-origin: center;
-                opacity: 0.9;
-            "></div>`,
-            iconSize: [12, 12],
-            iconAnchor: [6, 6]
-        });
-        
-        const arrow = L.marker(midpoint, { icon: arrowIcon }).addTo(map);
-        routeLayers[alg].push(arrow);
-    }
-}
-
-/* API call */
-async function callRoute(alg, useTraffic) {
-    if(markers.length < 2) { 
-        alert('⚠️ Эхлэл болон төгсгөл байрлуулаагүй байна.'); 
-        return null; 
-    }
-
+async function callRoute(alg, useTraffic, timeHour) {
+    if(markers.length < 2) { alert('⚠️ Эхлэл болон төгсгөл байрлуулаагүй.'); return null; }
     const src = markers[0].getLatLng(), dst = markers[1].getLatLng();
     const params = new URLSearchParams();
     params.set('src', `${src.lng},${src.lat}`);
     params.set('dst', `${dst.lng},${dst.lat}`);
     params.set('alg', alg);
     params.set('traffic', useTraffic ? 'true' : 'false');
-
-    const url = '/route?' + params.toString();
-    const res = await fetch(url);
-
-    if(!res.ok) {
-        const txt = await res.text().catch(() => res.statusText);
-        throw new Error(txt || res.statusText);
-    }
-
+    if(timeHour >= 0) params.set('time_hour', timeHour);
+    const res = await fetch('/route?' + params);
+    if(!res.ok) { const txt = await res.text().catch(() => res.statusText); throw new Error(txt || res.statusText); }
     return res.json();
 }
 
-/* Run button */
 document.getElementById('runReplace').onclick = async () => {
     const alg = document.getElementById('algSelect').value;
     const useTraffic = document.getElementById('trafficToggle').checked;
-    
-    const algNames = {
-        'dijkstra': 'Dijkstra',
-        'bfs': 'BFS',
-        'dfs': 'DFS'
-    };
-    const algName = algNames[alg] || alg;
-
-    const trafficText = useTraffic ? ' (🚦 Замын хөдөлгөөнтэй)' : '';
-    const progressInterval = showProgress(`${algName}${trafficText} ажиллаж байна...`);
+    const timeSelect = document.getElementById('timeSelect').value;
+    const timeHour = timeSelect === '-1' ? -1 : parseInt(timeSelect);
+    const algName = algorithmNames[alg] || alg;
+    const progressInterval = showProgress(`${algName} ажиллаж байна...`);
     document.getElementById('result').innerText = `⏳ ${algName} тооцоолж байна...`;
-
     try {
-        const data = await callRoute(alg, useTraffic);
+        const data = await callRoute(alg, useTraffic, timeHour);
         hideProgress(progressInterval);
-        
         if(!data) return;
-        
-        if(data.error) {
-            document.getElementById('result').innerHTML = `<strong style="color: #f5424e;">⚠️ Алдаа:</strong> ${data.message || data.error}`;
-            return;
-        }
-
-        const color = colorForAlg(data.algorithm);
-        
-        const entry = {
-            algorithm: data.algorithm,
-            path: data.path,
-            steps: data.steps,
-            distance: data.distance || null,
-            time: data.time || null,
-            traffic: data.traffic || false,
-            travel_time: data.travel_time || null,
-            visible: true,
-            color
-        };
-
-        resultsStore[data.algorithm] = entry;
-        
-        renderSavedList();
-        redrawAllVisible();
-        updateChartFromStore();
-
-        // Clear markers
-        markers.forEach(m => map.removeLayer(m));
-        markers = [];
-
-        let successMsg = `<strong style="color: #4caf50;">✓</strong> ${entry.algorithm}${entry.traffic ? ' 🚦' : ''}`;
-        if(entry.time) successMsg += ` — ⏱️ ${entry.time}ms`;
-        if(entry.steps) successMsg += ` | 👣 ${entry.steps}`;
-        if(entry.distance) successMsg += ` | 📏 ${Math.round(entry.distance)}м`;
-        if(entry.travel_time) successMsg += ` | 🚦 ${Math.round(entry.travel_time)}`;
-        
-        document.getElementById('result').innerHTML = successMsg;
-    } catch (err) {
-        hideProgress(progressInterval);
-        alert('❌ ' + err.message);
-        document.getElementById('result').innerHTML = `<strong style="color: #f5424e;">Алдаа:</strong> ${err.message}`;
-    }
+        if(data.error) { document.getElementById('result').innerHTML = `<strong style="color: #f5424e;">⚠️ Алдаа:</strong> ${data.message || data.error}`; return; }
+        const displayName = algorithmNames[data.algorithm] || data.algorithm;
+        const entry = { algorithm: displayName, path: data.path, steps: data.steps, distance: data.distance || null, time: data.time || null, traffic: data.traffic || false, travel_time: data.travel_time || null, visible: true, color: colorForAlg(displayName) };
+        resultsStore[displayName] = entry;
+        renderSavedList(); redrawAllVisible(); updateChartFromStore();
+        markers.forEach(m => map.removeLayer(m)); markers = [];
+        let msg = `<strong style="color: #4caf50;">✔</strong> ${entry.algorithm}`;
+        if(entry.time) msg += ` — ⏱️ ${entry.time}ms`;
+        if(entry.steps) msg += ` | 👣 ${entry.steps}`;
+        if(entry.distance) msg += ` | 📏 ${Math.round(entry.distance)}м`;
+        document.getElementById('result').innerHTML = msg;
+    } catch (err) { hideProgress(progressInterval); alert('❌ ' + err.message); document.getElementById('result').innerHTML = `<strong style="color: #f5424e;">Алдаа:</strong> ${err.message}`; }
 };
 
-/* Compare button */
 document.getElementById('compare').onclick = async () => {
-    if(markers.length < 2) { 
-        alert('⚠️ Эхлэл болон төгсгөл байрлуулаагүй байна.'); 
-        return; 
-    }
-
+    if(markers.length < 2) { alert('⚠️ Эхлэл болон төгсгөл байрлуулаагүй.'); return; }
     const useTraffic = document.getElementById('trafficToggle').checked;
-    const trafficText = useTraffic ? ' (🚦 Замын хөдөлгөөнтэй)' : '';
-
-    const progressInterval = showProgress(`⚖️ 3 алгоритм${trafficText} харьцуулж байна...`);
-    document.getElementById('result').innerText = '⏳ Харьцуулалт ажиллаж байна...';
-
+    const timeSelect = document.getElementById('timeSelect').value;
+    const timeHour = timeSelect === '-1' ? -1 : parseInt(timeSelect);
+    const progressInterval = showProgress('⚖️ 3 алгоритм харьцуулж байна...');
+    document.getElementById('result').innerText = '⏳ Харьцуулалт...';
     try {
         const src = markers[0].getLatLng(), dst = markers[1].getLatLng();
-        const url = `/compare?src=${src.lng},${src.lat}&dst=${dst.lng},${dst.lat}&traffic=${useTraffic ? 'true' : 'false'}`;
+        let url = `/compare?src=${src.lng},${src.lat}&dst=${dst.lng},${dst.lat}&traffic=${useTraffic ? 'true' : 'false'}`;
+        if(timeHour >= 0) url += `&time_hour=${timeHour}`;
         const res = await fetch(url);
-        
         hideProgress(progressInterval);
-        
-        if(!res.ok) { 
-            const t = await res.text().catch(() => res.statusText); 
-            throw new Error(t || res.statusText); 
-        }
-        
+        if(!res.ok) { const t = await res.text().catch(() => res.statusText); throw new Error(t || res.statusText); }
         const arr = await res.json();
-        
         for(const r of arr) {
             if(!r || r.error) continue;
-            const algName = r.algorithm;
-            const color = colorForAlg(algName);
-            const entry = { 
-                algorithm: algName,
-                path: r.path,
-                steps: r.steps,
-                distance: r.distance || null,
-                time: r.time || null,
-                traffic: r.traffic || false,
-                travel_time: r.travel_time || null,
-                visible: true, 
-                color 
-            };
-            resultsStore[algName] = entry;
+            const algName = algorithmNames[r.algorithm] || r.algorithm;
+            resultsStore[algName] = { algorithm: algName, path: r.path, steps: r.steps, distance: r.distance || null, time: r.time || null, traffic: r.traffic || false, travel_time: r.travel_time || null, visible: true, color: colorForAlg(algName) };
         }
-        
-        markers.forEach(m => map.removeLayer(m)); 
-        markers = [];
-
-        renderSavedList(); 
-        redrawAllVisible(); 
-        updateChartFromStore();
-        
-        // Show comparison summary
-        const times = arr.filter(r => !r.error).map(r => `${r.algorithm}: ${r.time}ms`).join(', ');
-        document.getElementById('result').innerHTML = `<strong style="color: #4caf50;">✓</strong> Харьцуулалт дууссан${trafficText}<br><small style="color: #90caf9;">${times}</small>`;
-    } catch(err) {
-        hideProgress(progressInterval);
-        alert('❌ ' + err.message);
-        document.getElementById('result').innerHTML = `<strong style="color: #f5424e;">Алдаа:</strong> ${err.message}`;
-    }
+        markers.forEach(m => map.removeLayer(m)); markers = [];
+        renderSavedList(); redrawAllVisible(); updateChartFromStore();
+        const times = arr.filter(r => !r.error).map(r => `${algorithmNames[r.algorithm]}: ${r.time}ms`).join(', ');
+        document.getElementById('result').innerHTML = `<strong style="color: #4caf50;">✔</strong> Харьцуулалт дуусан<br><small>${times}</small>`;
+    } catch(err) { hideProgress(progressInterval); alert('❌ ' + err.message); document.getElementById('result').innerHTML = `<strong style="color: #f5424e;">Алдаа:</strong> ${err.message}`; }
 };
 
-/* Clear button */
 document.getElementById('clear').onclick = () => {
     for(const alg in routeLayers) routeLayers[alg].forEach(l => map.removeLayer(l));
-    routeLayers = {};
-    resultsStore = {};
-    renderSavedList();
-    markers.forEach(m => map.removeLayer(m)); 
-    markers = [];
-    chart.data.labels = []; 
-    chart.data.datasets[0].data = []; 
-    chart.update();
+    routeLayers = {}; resultsStore = {}; renderSavedList();
+    markers.forEach(m => map.removeLayer(m)); markers = [];
+    chart.data.labels = []; chart.data.datasets[0].data = []; chart.update();
     document.getElementById('result').innerText = '🗑️ Бүх зүйл цэвэрлэгдлээ';
 };
 
-// Initialize
-renderSavedList();
-updateChartFromStore();
+renderSavedList(); updateChartFromStore();
 </script>
 </body>
 </html>

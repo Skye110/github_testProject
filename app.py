@@ -1,22 +1,56 @@
-from flask import Flask, request, jsonify, render_template
+from fastapi import FastAPI, Query, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from build_graph import build_graph_from_shp
 from algorithms import bfs_shortest, dfs_path_safe, dijkstra
 from pyproj import Transformer
 import os
 import logging
 import time
+import copy
+from pathlib import Path
+
+# Import configuration
+try:
+    from config import get_shapefile_path
+except ImportError:
+    def get_shapefile_path():
+        paths = [
+            os.environ.get("OSM_SHP"),
+            os.path.join(os.path.dirname(__file__), "map", "gis_osm_roads_free_1.shp"),
+            "map/gis_osm_roads_free_1.shp",
+            "D:/3r_kurs/4-2/map/map/gis_osm_roads_free_1.shp",
+        ]
+        for path in paths:
+            if path and os.path.exists(path):
+                return path
+        raise FileNotFoundError("Shapefile not found. Set OSM_SHP env var or place in map/ folder.")
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("routefinder")
 
-app = Flask(__name__, template_folder="templates", static_folder="static")
+# Initialize FastAPI app
+app = FastAPI(
+    title="UB Route Finder",
+    description="Traffic Flow Visualization with Pathfinding Algorithms",
+    version="2.0.0"
+)
+
+# Mount static files
+static_path = Path(__file__).parent / "static"
+if static_path.exists():
+    app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
 # Load shapefile
-SHP_PATH = os.environ.get("OSM_SHP", "D:/3r_kurs/4-2/map/gis_osm_roads_free_1.shp")
-log.info("Main: loading graph from %s", SHP_PATH)
-G, graph_crs = build_graph_from_shp(SHP_PATH)
-log.info("Main: graph loaded: nodes=%d adj_entries=%d", 
-         len(G.node_coords), sum(len(v) for v in G.adj.values()))
+try:
+    SHP_PATH = get_shapefile_path()
+    log.info("Loading graph from %s", SHP_PATH)
+    G, graph_crs = build_graph_from_shp(SHP_PATH)
+    log.info("Graph loaded: nodes=%d edges=%d", 
+             len(G.node_coords), sum(len(v) for v in G.adj.values()))
+except FileNotFoundError as e:
+    log.error(str(e))
+    raise
 
 # Create transformer for coordinate conversion
 transformer_to_graph = Transformer.from_crs("EPSG:4326", graph_crs.to_string(), always_xy=True)
@@ -32,7 +66,7 @@ def nearest_node(graph, x, y):
     return best
 
 
-def apply_traffic_to_graph(graph, traffic_multiplier=1.5):
+def apply_traffic_to_graph(graph, traffic_multiplier=2.0):
     """
     Apply traffic flow simulation to graph edges.
     Higher traffic = higher weight (slower travel).
@@ -54,27 +88,39 @@ def apply_traffic_to_graph(graph, traffic_multiplier=1.5):
     log.info(f"Applied traffic simulation with max multiplier {traffic_multiplier}x")
 
 
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-
-@app.route("/route")
-def route():
-    """Main route finding endpoint - supports BFS, DFS, and Dijkstra."""
-    src = request.args.get("src")
-    dst = request.args.get("dst")
-    alg = (request.args.get("alg") or "dijkstra").lower()
-    use_traffic = request.args.get("traffic", "false").lower() == "true"
-
-    if not src or not dst:
-        return jsonify(error="src and dst required (lon,lat)"), 400
+@app.get("/", response_class=HTMLResponse)
+async def home():
+    """Serve the main HTML page."""
+    templates_path = Path(__file__).parent / "templates" / "index.html"
+    if not templates_path.exists():
+        raise HTTPException(status_code=404, detail="Template not found")
     
+    with open(templates_path, "r", encoding="utf-8") as f:
+        html_content = f.read()
+    
+    # Replace Flask url_for with direct paths
+    html_content = html_content.replace("{{ url_for('static', filename='style.css') }}", "/static/style.css")
+    
+    return HTMLResponse(content=html_content)
+
+
+@app.get("/route")
+async def route(
+    src: str = Query(..., description="Source coordinates (lon,lat)"),
+    dst: str = Query(..., description="Destination coordinates (lon,lat)"),
+    alg: str = Query("dijkstra", description="Algorithm: dijkstra, bfs, or dfs"),
+    traffic: str = Query("false", description="Enable traffic simulation: true or false"),
+    time_hour: int = Query(None, description="Hour of day for simulation (0-23)", ge=0, le=23)
+):
+    """Main route finding endpoint - supports BFS, DFS, and Dijkstra."""
+    alg = alg.lower()
+    use_traffic = traffic.lower() == "true"
+
     try:
         lon1, lat1 = map(float, src.split(","))
         lon2, lat2 = map(float, dst.split(","))
     except Exception as e:
-        return jsonify(error=f"bad src/dst format: {e}"), 400
+        raise HTTPException(status_code=400, detail=f"bad src/dst format: {e}")
 
     # Transform coordinates to graph CRS
     try:
@@ -88,13 +134,11 @@ def route():
     t = nearest_node(G, gx2, gy2)
     
     if s is None or t is None:
-        return jsonify(error="nearest node not found"), 400
+        raise HTTPException(status_code=400, detail="nearest node not found")
 
     # Apply traffic if requested
     graph_to_use = G
     if use_traffic:
-        import copy
-        from build_graph import Graph
         graph_to_use = copy.deepcopy(G)
         apply_traffic_to_graph(graph_to_use, traffic_multiplier=2.0)
 
@@ -113,7 +157,7 @@ def route():
             
         elif alg == "dfs":
             log.info(f"Running DFS from node {s} to {t}")
-            path_nodes = dfs_path_safe(graph_to_use, s, t, max_nodes=1000000, max_depth=5000)
+            path_nodes = dfs_path_safe(graph_to_use, s, t, max_nodes=500000, max_depth=10000)
             used_alg = "DFS"
             
         elif alg == "dijkstra":
@@ -122,14 +166,17 @@ def route():
             used_alg = "Dijkstra"
             
         else:
-            return jsonify(error=f"Unknown algorithm: {alg}. Use 'bfs', 'dfs', or 'dijkstra'"), 400
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Unknown algorithm: {alg}. Use 'bfs', 'dfs', or 'dijkstra'"
+            )
         
         elapsed_time = time.perf_counter() - start_time
         
         # Check if path was found
         if not path_nodes:
             log.warning(f"No path found using {used_alg}")
-            return jsonify({
+            return JSONResponse({
                 "algorithm": used_alg,
                 "error": "no path found",
                 "message": "Could not find route between points",
@@ -171,28 +218,30 @@ def route():
                 f"{round(actual_distance, 3)}m distance in {round(elapsed_time * 1000, 2)}ms" +
                 (f" (traffic-weighted: {round(travel_time, 3)})" if use_traffic else ""))
         
-        return jsonify(result)
+        return JSONResponse(result)
 
+    except HTTPException:
+        raise
     except Exception as ex:
         log.exception("Error processing route")
-        return jsonify(error=f"processing error: {str(ex)}"), 500
+        raise HTTPException(status_code=500, detail=f"processing error: {str(ex)}")
 
 
-@app.route("/compare")
-def compare():
+@app.get("/compare")
+async def compare(
+    src: str = Query(..., description="Source coordinates (lon,lat)"),
+    dst: str = Query(..., description="Destination coordinates (lon,lat)"),
+    traffic: str = Query("false", description="Enable traffic simulation: true or false"),
+    time_hour: int = Query(None, description="Hour of day (0-23)", ge=0, le=23)
+):
     """Compare all three algorithms."""
-    src = request.args.get("src")
-    dst = request.args.get("dst")
-    use_traffic = request.args.get("traffic", "false").lower() == "true"
-    
-    if not src or not dst:
-        return jsonify(error="src and dst required (lon,lat)"), 400
+    use_traffic = traffic.lower() == "true"
     
     try:
         lon1, lat1 = map(float, src.split(","))
         lon2, lat2 = map(float, dst.split(","))
     except Exception as e:
-        return jsonify(error=f"bad src/dst format: {e}"), 400
+        raise HTTPException(status_code=400, detail=f"bad src/dst format: {e}")
 
     # Transform coordinates
     gx1, gy1 = transformer_to_graph.transform(lon1, lat1)
@@ -201,12 +250,11 @@ def compare():
     t = nearest_node(G, gx2, gy2)
     
     if s is None or t is None:
-        return jsonify(error="nearest node not found"), 400
+        raise HTTPException(status_code=400, detail="nearest node not found")
 
     # Apply traffic if requested
     graph_to_use = G
     if use_traffic:
-        import copy
         graph_to_use = copy.deepcopy(G)
         apply_traffic_to_graph(graph_to_use, traffic_multiplier=2.0)
 
@@ -290,7 +338,7 @@ def compare():
     # 3. DFS
     try:
         start_time = time.perf_counter()
-        path_nodes = dfs_path_safe(graph_to_use, s, t, max_nodes=1000000, max_depth=5000)
+        path_nodes = dfs_path_safe(graph_to_use, s, t, max_nodes=500000, max_depth=10000)
         elapsed_time = time.perf_counter() - start_time
         
         if path_nodes:
@@ -323,8 +371,19 @@ def compare():
         log.exception("Error in DFS comparison")
         results.append({"algorithm": "DFS", "error": str(ex)})
     
-    return jsonify(results)
+    return JSONResponse(results)
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "nodes": len(G.node_coords),
+        "edges": sum(len(v) for v in G.adj.values())
+    }
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000, threaded=True)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=5000, log_level="info")

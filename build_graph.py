@@ -103,7 +103,7 @@ def build_graph_from_shp(shp_path, target_epsg=3857):
             print(f"  Processed {idx + 1}/{len(gdf)} features...")
 
     # Transform all node coordinates to WGS84 for output
-    print("🌐 Converting coordinates to WGS84...")
+    print("🌍 Converting coordinates to WGS84...")
     for nid, (x, y) in G.node_coords.items():
         lon, lat = to_wgs84.transform(x, y)
         G.node_lonlat[nid] = (float(lon), float(lat))
