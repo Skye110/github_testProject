@@ -1,0 +1,446 @@
+:root {
+  --bg: #0b0f13;
+  --panel-bg: rgba(15, 23, 33, 0.95);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --muted: #cfe9ff;
+  --accent: #1f6feb;
+  --success: #28a745;
+  --danger: #d9534f;
+  --warning: #ffc107;
+  --panel-radius: 10px;
+  --control-w: 340px;
+  --font: "Segoe UI", "Roboto", -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: #fff;
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+/* Map container */
+#map {
+  height: 100vh;
+  width: 100%;
+  position: relative;
+}
+
+/* Control panel */
+#control-panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 9999;
+  width: var(--control-w);
+  max-height: calc(100vh - 32px);
+  background: var(--panel-bg);
+  padding: 16px;
+  border-radius: var(--panel-radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--panel-border);
+  overflow-y: auto;
+  backdrop-filter: blur(10px);
+}
+
+/* Scrollbar styling */
+#control-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+#control-panel::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+#control-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+#control-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Headings */
+#control-panel h2 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #fff;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 8px;
+}
+
+#control-panel h4 {
+  margin: 12px 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #d3e8ff;
+}
+
+/* Control groups */
+.control-group {
+  margin-bottom: 12px;
+}
+
+.control-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.control-col {
+  flex: 1;
+}
+
+/* Labels */
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #d3e8ff;
+}
+
+/* Inputs and selects */
+input[type="number"],
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: 14px;
+  font-family: var(--font);
+  transition: all 0.2s ease;
+}
+
+input[type="number"]:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.2);
+}
+
+input::placeholder {
+  color: #7a8896;
+}
+
+/* Buttons */
+button {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: var(--font);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Button variants */
+.btn-primary, #runReplace {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover, #runReplace:hover {
+  background: #2875f0;
+}
+
+.btn-success, #compare {
+  background: var(--success);
+  color: #fff;
+}
+
+.btn-success:hover, #compare:hover {
+  background: #2fb950;
+}
+
+.btn-danger, #clear {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-danger:hover, #clear:hover {
+  background: #e15653;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  width: auto;
+}
+
+/* Button group */
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+/* Status box */
+.status-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 12px 0;
+}
+
+#result {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #d1e7ff;
+  word-wrap: break-word;
+}
+
+/* Progress bar */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--success));
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+#progressText {
+  font-size: 12px;
+  color: #9fb0bf;
+  text-align: center;
+}
+
+/* Panel blocks */
+.panel-block {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+/* Saved list */
+.saved-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+
+.saved-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.saved-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.saved-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+.saved-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.2s ease;
+}
+
+.saved-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.saved-row:last-child {
+  border-bottom: none;
+}
+
+.saved-left {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex: 1;
+}
+
+.swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  display: inline-block;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.lbl {
+  font-weight: 600;
+  font-size: 13px;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.meta {
+  font-size: 11px;
+  color: #9fb0bf;
+}
+
+.saved-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.toggle-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.delete-btn {
+  background: var(--danger);
+  color: #fff;
+  padding: 4px 10px;
+  font-size: 14px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-btn:hover {
+  background: #e15653;
+}
+
+/* Chart canvas */
+canvas {
+  margin-top: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  display: block;
+  width: 100%;
+  height: 160px !important;
+}
+
+/* Custom marker icons */
+.custom-marker {
+  background: transparent;
+  border: none;
+}
+
+/* Paths legend */
+#pathsLegendContent {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  #control-panel {
+    left: 8px;
+    top: 8px;
+    width: calc(100% - 16px);
+    max-width: 400px;
+    max-height: calc(100vh - 16px);
+  }
+}
+
+@media (max-width: 480px) {
+  #control-panel {
+    width: calc(100% - 16px);
+  }
+  
+  .control-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .saved-row {
+    font-size: 12px;
+  }
+  
+  .saved-actions {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+/* Leaflet popup customization */
+.leaflet-popup-content-wrapper {
+  background: var(--panel-bg);
+  color: #fff;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  backdrop-filter: blur(10px);
+}
+
+.leaflet-popup-tip {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+  line-height: 1.4;
+  font-size: 13px;
+}
+
+/* Animation for progress */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+#progress {
+  animation: pulse 2s ease-in-out infinite;
+}
