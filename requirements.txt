@@ -1,19 +1,8 @@
-# Web Framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-
-# Geospatial Libraries
-geopandas==0.14.1
-shapely==2.0.2
-pyproj==3.6.1
-fiona==1.9.5
-
-# Data Processing
-pandas==2.1.3
-numpy==1.26.2
-
-# HTTP Client (if needed)
-httpx==0.25.2
-
-# Optional: Development tools
-python-multipart==0.0.6
+fastapi==0.121.2
+uvicorn==0.29.0
+geopandas==1.1.1
+shapely==2.1.2
+pyproj==3.7.2
+pyogrio==0.11.1
+pandas==2.3.3
+numpy==2.3.4
