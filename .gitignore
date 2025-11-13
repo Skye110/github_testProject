@@ -1,29 +1,4 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-*.egg-info/
-dist/
-build/
 
-# Map data files (can be large)
-*.shp
-*.shx
-*.dbf
-*.prj
-*.cpg
-*.qpj
-map/
-data/
-
-# Local configuration
-config_local.py
-.env
 
 # IDE
 .vscode/
