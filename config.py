@@ -1,24 +1,9 @@
 import os
-
-# Configuration for the route finder application
-
-# Shapefile path configuration
-# Priority: 
-# 1. Environment variable OSM_SHP
-# 2. Relative path (for GitHub/deployment)
-# 3. Absolute path (for local development)
-
 def get_shapefile_path():
-    """
-    Get the shapefile path from various sources.
-    This allows the app to work in different environments without code changes.
-    """
-    # Try environment variable first
     env_path = os.environ.get("OSM_SHP")
     if env_path and os.path.exists(env_path):
         return env_path
-    
-    # Try relative paths (for GitHub/deployment)
+
     relative_paths = [
         os.path.join(os.path.dirname(__file__), "map", "gis_osm_roads_free_1.shp"),
         os.path.join(os.path.dirname(__file__), "data", "gis_osm_roads_free_1.shp"),
