@@ -17,6 +17,9 @@ A web-based route finding application that compares different pathfinding algori
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
+pip install -r requirements.txt
+or 
+.\.venv\Scripts\Activate
 
 pip install -r requirements.txt
 
