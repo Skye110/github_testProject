@@ -2,19 +2,15 @@
   --bg: #0b0f13;
   --panel-bg: rgba(15, 23, 33, 0.95);
   --panel-border: rgba(255, 255, 255, 0.1);
-  --muted: #cfe9ff;
   --accent: #1f6feb;
   --success: #28a745;
   --danger: #d9534f;
-  --warning: #ffc107;
   --panel-radius: 10px;
   --control-w: 340px;
   --font: "Segoe UI", "Roboto", -apple-system, sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body {
   height: 100%;
@@ -26,19 +22,15 @@ body {
   background: var(--bg);
   color: #fff;
   font-family: var(--font);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
 }
 
-/* Map container */
 #map {
   height: 100vh;
   width: 100%;
   position: relative;
 }
 
-/* Control panel */
 #control-panel {
   position: absolute;
   top: 16px;
@@ -55,31 +47,15 @@ body {
   backdrop-filter: blur(10px);
 }
 
-/* Scrollbar styling */
-#control-panel::-webkit-scrollbar {
-  width: 6px;
-}
+#control-panel::-webkit-scrollbar { width: 6px; }
+#control-panel::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 3px; }
+#control-panel::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 3px; }
+#control-panel::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
 
-#control-panel::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 3px;
-}
-
-#control-panel::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-}
-
-#control-panel::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* Headings */
 #control-panel h2 {
   margin: 0 0 16px 0;
   font-size: 18px;
   font-weight: 700;
-  line-height: 1.2;
   color: #fff;
   border-bottom: 2px solid var(--accent);
   padding-bottom: 8px;
@@ -92,22 +68,8 @@ body {
   color: #d3e8ff;
 }
 
-/* Control groups */
-.control-group {
-  margin-bottom: 12px;
-}
+.control-group { margin-bottom: 12px; }
 
-.control-row {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.control-col {
-  flex: 1;
-}
-
-/* Labels */
 label {
   display: block;
   margin-bottom: 6px;
@@ -116,7 +78,6 @@ label {
   color: #d3e8ff;
 }
 
-/* Inputs and selects */
 input[type="number"],
 select {
   width: 100%;
@@ -138,11 +99,6 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.2);
 }
 
-input::placeholder {
-  color: #7a8896;
-}
-
-/* Buttons */
 button {
   width: 100%;
   padding: 10px 16px;
@@ -153,8 +109,6 @@ button {
   font-size: 14px;
   font-family: var(--font);
   transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
 }
 
 button:hover {
@@ -162,42 +116,29 @@ button:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-button:active {
-  transform: translateY(0);
-}
+button:active { transform: translateY(0); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Button variants */
 .btn-primary, #runReplace {
   background: var(--accent);
   color: #fff;
 }
 
-.btn-primary:hover, #runReplace:hover {
-  background: #2875f0;
-}
+.btn-primary:hover, #runReplace:hover { background: #2875f0; }
 
 .btn-success, #compare {
   background: var(--success);
   color: #fff;
 }
 
-.btn-success:hover, #compare:hover {
-  background: #2fb950;
-}
+.btn-success:hover, #compare:hover { background: #2fb950; }
 
 .btn-danger, #clear {
   background: var(--danger);
   color: #fff;
 }
 
-.btn-danger:hover, #clear:hover {
-  background: #e15653;
-}
+.btn-danger:hover, #clear:hover { background: #e15653; }
 
 .btn-sm {
   padding: 6px 12px;
@@ -205,7 +146,6 @@ button:disabled {
   width: auto;
 }
 
-/* Button group */
 .button-group {
   display: flex;
   flex-direction: column;
@@ -213,7 +153,6 @@ button:disabled {
   margin: 16px 0;
 }
 
-/* Status box */
 .status-box {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -229,7 +168,6 @@ button:disabled {
   word-wrap: break-word;
 }
 
-/* Progress bar */
 .progress-bar {
   width: 100%;
   height: 6px;
@@ -251,7 +189,6 @@ button:disabled {
   text-align: center;
 }
 
-/* Panel blocks */
 .panel-block {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -260,25 +197,15 @@ button:disabled {
   margin-top: 12px;
 }
 
-/* Saved list */
 .saved-list {
   max-height: 200px;
   overflow-y: auto;
   margin-top: 8px;
 }
 
-.saved-list::-webkit-scrollbar {
-  width: 4px;
-}
-
-.saved-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.saved-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
-}
+.saved-list::-webkit-scrollbar { width: 4px; }
+.saved-list::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.03); }
+.saved-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 2px; }
 
 .saved-row {
   display: flex;
@@ -289,13 +216,8 @@ button:disabled {
   transition: background 0.2s ease;
 }
 
-.saved-row:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.saved-row:last-child {
-  border-bottom: none;
-}
+.saved-row:hover { background: rgba(255, 255, 255, 0.03); }
+.saved-row:last-child { border-bottom: none; }
 
 .saved-left {
   display: flex;
@@ -338,9 +260,7 @@ button:disabled {
   font-size: 11px;
 }
 
-.toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
+.toggle-btn:hover { background: rgba(255, 255, 255, 0.15); }
 
 .delete-btn {
   background: var(--danger);
@@ -354,11 +274,8 @@ button:disabled {
   justify-content: center;
 }
 
-.delete-btn:hover {
-  background: #e15653;
-}
+.delete-btn:hover { background: #e15653; }
 
-/* Chart canvas */
 canvas {
   margin-top: 8px;
   background: rgba(0, 0, 0, 0.2);
@@ -368,50 +285,20 @@ canvas {
   height: 160px !important;
 }
 
-/* Custom marker icons */
 .custom-marker {
   background: transparent;
   border: none;
 }
 
-/* Paths legend */
-#pathsLegendContent {
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-/* Responsive design */
 @media (max-width: 768px) {
   #control-panel {
     left: 8px;
     top: 8px;
     width: calc(100% - 16px);
     max-width: 400px;
-    max-height: calc(100vh - 16px);
   }
 }
 
-@media (max-width: 480px) {
-  #control-panel {
-    width: calc(100% - 16px);
-  }
-  
-  .control-row {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .saved-row {
-    font-size: 12px;
-  }
-  
-  .saved-actions {
-    flex-direction: column;
-    gap: 4px;
-  }
-}
-
-/* Leaflet popup customization */
 .leaflet-popup-content-wrapper {
   background: var(--panel-bg);
   color: #fff;
@@ -431,16 +318,9 @@ canvas {
   font-size: 13px;
 }
 
-/* Animation for progress */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
+#progress { animation: pulse 2s ease-in-out infinite; }
 
-#progress {
-  animation: pulse 2s ease-in-out infinite;
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }

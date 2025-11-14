@@ -1,12 +1,14 @@
 """
-Pathfinding Algorithms - All find FIRST path (not necessarily shortest)
+Pathfinding Algorithms - Fixed Version
+All algorithms find FIRST path, not necessarily optimal
 """
+
 from collections import deque
 import heapq
 
 
 def bfs_shortest(graph, start, goal):
-    """Breadth-First Search - finds FIRST path level by level"""
+    """BFS - Breadth-First Search"""
     if start == goal:
         return [start]
     
@@ -20,6 +22,7 @@ def bfs_shortest(graph, start, goal):
             if neighbor in visited:
                 continue
             
+            # Return first path found
             if neighbor == goal:
                 return path + [neighbor]
             
@@ -29,34 +32,32 @@ def bfs_shortest(graph, start, goal):
     return None
 
 
-def dfs_path_safe(graph, start, goal, max_depth=5000):
-    """Depth-First Search - finds FIRST path quickly (iterative)"""
+def dfs_path_safe(graph, start, goal, max_nodes=100000):
+    """DFS - Depth-First Search (Fixed iterative version)"""
     if start == goal:
         return [start]
     
-    # Use simple iterative DFS with visited set
+    # Stack: (node, path)
     stack = [(start, [start])]
     visited = set()
-    nodes_explored = 0
-    max_nodes = 50000
+    nodes_checked = 0
     
-    while stack and nodes_explored < max_nodes:
+    while stack and nodes_checked < max_nodes:
         node, path = stack.pop()
         
         if node in visited:
             continue
-            
+        
         visited.add(node)
-        nodes_explored += 1
+        nodes_checked += 1
         
-        if len(path) > max_depth:
-            continue
-        
+        # Check goal
         if node == goal:
             return path
         
         # Add neighbors to stack
-        for neighbor, _, _ in graph.adj.get(node, []):
+        neighbors = graph.adj.get(node, [])
+        for neighbor, _, _ in neighbors:
             if neighbor not in visited:
                 stack.append((neighbor, path + [neighbor]))
     
@@ -64,7 +65,7 @@ def dfs_path_safe(graph, start, goal, max_depth=5000):
 
 
 def dijkstra(graph, start, goal):
-    """Dijkstra - finds FIRST path using priority queue (shortest weighted)"""
+    """Dijkstra - Returns first path found (early termination)"""
     if start == goal:
         return [start], 0.0
     
@@ -81,18 +82,16 @@ def dijkstra(graph, start, goal):
         
         visited.add(node)
         
-        # Found goal - return immediately
+        # Return immediately when goal is reached
         if node == goal:
             path = []
             current = goal
             while current != start:
                 path.append(current)
-                current = prev.get(current)
-                if current is None:
-                    return None, float("inf")
+                current = prev[current]
             path.append(start)
             path.reverse()
-            return path, dist.get(goal, 0.0)
+            return path, dist[goal]
         
         if current_dist > dist.get(node, float("inf")):
             continue

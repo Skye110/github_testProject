@@ -15,7 +15,7 @@
     <h2>🗺️ Route Finder</h2>
 
     <div class="control-group">
-        <label for="algSelect">Algorithm</label>
+        <label for="algSelect">Алгоритм</label>
         <select id="algSelect">
             <option value="dijkstra">Dijkstra</option>
             <option value="bfs">BFS</option>
@@ -26,29 +26,18 @@
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
             <input type="checkbox" id="trafficToggle" style="width: auto; cursor: pointer;">
-            <span>🚦 Enable Traffic Simulation</span>
+            <span>🚦 Замын хөдөлгөөн</span>
         </label>
     </div>
 
-    <div class="control-group" id="trafficControls" style="display: none;">
-        <label for="timeSelect">Time of Day</label>
-        <select id="timeSelect">
-            <option value="-1">Current Time</option>
-            <option value="8">08:00 - Morning Rush</option>
-            <option value="12">12:00 - Midday</option>
-            <option value="18">18:00 - Evening Rush</option>
-            <option value="22">22:00 - Night</option>
-        </select>
-    </div>
-
     <div class="button-group">
-        <button id="runReplace" class="btn-primary">▶️ Run Algorithm</button>
-        <button id="compare" class="btn-success">⚖️ Compare All</button>
-        <button id="clear" class="btn-danger">🗑️ Clear</button>
+        <button id="runReplace" class="btn-primary">▶️ Гүйцэтгэх</button>
+        <button id="compare" class="btn-success">⚖️ Харьцуулах</button>
+        <button id="clear" class="btn-danger">🗑️ Цэвэрлэх</button>
     </div>
 
     <div id="status" class="status-box">
-        <div id="result">📍 Click on map: Start → End</div>
+        <div id="result">📍 Эхлэл, дараа Төгсгөл сонгоно уу</div>
         <div id="progress" style="display:none; margin-top: 8px;">
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill"></div>
@@ -58,12 +47,12 @@
     </div>
 
     <div class="panel-block">
-        <h4>📊 Results</h4>
+        <h4>📊 Үр дүн</h4>
         <div id="savedList" class="saved-list"></div>
     </div>
 
     <div class="panel-block">
-        <h4>⏱️ Performance</h4>
+        <h4>⏱️ Хугацаа</h4>
         <canvas id="perfChart" width="280" height="140"></canvas>
     </div>
 </div>
@@ -79,35 +68,40 @@ let markers = [];
 let routeLayers = {};
 let resultsStore = {};
 
-const algorithmNames = {
-    'dijkstra': 'Dijkstra',
-    'bfs': 'BFS',
-    'dfs': 'DFS'
+const colors = {
+    'Dijkstra': '#e74c3c',
+    'BFS': '#3498db',
+    'DFS': '#2ecc71'
 };
 
-function colorForAlg(alg) {
-    const colors = {
-        'Dijkstra': '#e74c3c',
-        'BFS': '#3498db',
-        'DFS': '#2ecc71'
-    };
-    return colors[alg] || '#888';
-}
-
 document.getElementById('trafficToggle').onchange = function() {
-    document.getElementById('trafficControls').style.display = this.checked ? 'block' : 'none';
+    // Just visual feedback, backend handles traffic
 };
 
 const ctx = document.getElementById('perfChart').getContext('2d');
 const chart = new Chart(ctx, { 
     type: 'bar', 
-    data: { labels: [], datasets: [{ label: 'Time (ms)', data: [], backgroundColor: [] }] }, 
+    data: { 
+        labels: [], 
+        datasets: [{ 
+            label: 'мс', 
+            data: [], 
+            backgroundColor: [] 
+        }] 
+    }, 
     options: { 
         responsive: true, 
         maintainAspectRatio: false,
         scales: { 
-            y: { beginAtZero: true, title: { display: true, text: 'ms', color: '#d3e8ff' }, ticks: { color: '#d3e8ff' }, grid: { color: 'rgba(255,255,255,0.1)' } },
-            x: { ticks: { color: '#d3e8ff' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+            y: { 
+                beginAtZero: true, 
+                ticks: { color: '#d3e8ff' }, 
+                grid: { color: 'rgba(255,255,255,0.1)' } 
+            },
+            x: { 
+                ticks: { color: '#d3e8ff' }, 
+                grid: { color: 'rgba(255,255,255,0.1)' } 
+            }
         },
         plugins: { legend: { display: false } }
     } 
@@ -117,7 +111,7 @@ function updateChart() {
     const keys = Object.keys(resultsStore);
     chart.data.labels = keys;
     chart.data.datasets[0].data = keys.map(k => resultsStore[k].time || 0);
-    chart.data.datasets[0].backgroundColor = keys.map(k => resultsStore[k].color);
+    chart.data.datasets[0].backgroundColor = keys.map(k => colors[k]);
     chart.update();
 }
 
@@ -126,39 +120,51 @@ function showProgress(text) {
     document.getElementById('progressText').innerText = text;
     let width = 0;
     const fill = document.getElementById('progressFill');
-    const interval = setInterval(() => { width += 5; if(width > 90) width = 90; fill.style.width = width + '%'; }, 300);
+    const interval = setInterval(() => { 
+        width += 5; 
+        if(width > 90) width = 90; 
+        fill.style.width = width + '%'; 
+    }, 300);
     return interval;
 }
 
 function hideProgress(interval) {
     clearInterval(interval);
     document.getElementById('progressFill').style.width = '100%';
-    setTimeout(() => { document.getElementById('progress').style.display = 'none'; document.getElementById('progressFill').style.width = '0%'; }, 500);
+    setTimeout(() => { 
+        document.getElementById('progress').style.display = 'none'; 
+        document.getElementById('progressFill').style.width = '0%'; 
+    }, 500);
 }
 
 function addMarker(latlng, label) {
-    const icon = label === 'Start' ? '🟢' : '🔴';
+    const icon = label === 'Эхлэл' ? '🟢' : '🔴';
     const m = L.marker(latlng, {
-        icon: L.divIcon({ className: 'custom-marker', html: `<div style="font-size: 24px;">${icon}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] })
+        icon: L.divIcon({ 
+            className: 'custom-marker', 
+            html: `<div style="font-size: 24px;">${icon}</div>`, 
+            iconSize: [30, 30], 
+            iconAnchor: [15, 15] 
+        })
     }).addTo(map).bindPopup(`<b>${label}</b>`).openPopup();
     markers.push(m);
 }
 
 map.on('click', e => {
     if(markers.length === 0) { 
-        addMarker(e.latlng, 'Start'); 
-        document.getElementById('result').innerText = '✅ Start set. Click End.'; 
+        addMarker(e.latlng, 'Эхлэл'); 
+        document.getElementById('result').innerText = '✅ Төгсгөл сонгоно уу'; 
         return; 
     }
     if(markers.length === 1) { 
-        addMarker(e.latlng, 'End'); 
-        document.getElementById('result').innerText = '✅ End set. Run algorithm.'; 
+        addMarker(e.latlng, 'Төгсгөл'); 
+        document.getElementById('result').innerText = '✅ "Гүйцэтгэх" дарна уу'; 
         return; 
     }
     markers.forEach(m => map.removeLayer(m)); 
     markers = []; 
-    addMarker(e.latlng, 'Start'); 
-    document.getElementById('result').innerText = '🔄 New start. Click End.';
+    addMarker(e.latlng, 'Эхлэл'); 
+    document.getElementById('result').innerText = '🔄 Төгсгөл сонгоно уу';
 });
 
 function renderSavedList() {
@@ -166,25 +172,36 @@ function renderSavedList() {
     box.innerHTML = '';
     const keys = Object.keys(resultsStore);
     if(keys.length === 0) { 
-        box.innerHTML = '<div style="color: #888; text-align: center; padding: 12px;">No results</div>'; 
+        box.innerHTML = '<div style="color: #888; text-align: center; padding: 12px;">Үр дүн алга</div>'; 
         return; 
     }
     keys.forEach(alg => {
         const r = resultsStore[alg];
         const row = document.createElement('div'); 
         row.className = 'saved-row';
-        const timeText = r.time ? `⏱️ ${r.time}ms` : '';
-        const distText = r.distance ? ` | 📏 ${Math.round(r.distance)}m` : '';
-        const stepsText = r.steps ? ` | 👣 ${r.steps}` : '';
-        row.innerHTML = `<div class="saved-left"><span class="swatch" style="background:${r.color}"></span><div><div class="lbl">${alg}${r.traffic ? ' 🚦' : ''}</div><div class="meta">${timeText}${stepsText}${distText}</div></div></div><div class="saved-actions"><button data-alg="${alg}" class="toggle-btn btn-sm">${r.visible ? '👁️':'👁️‍🗨️'}</button><button data-alg="${alg}" class="delete-btn btn-sm">×</button></div>`;
+        const time = r.time ? `⏱️ ${r.time}ms` : '';
+        const dist = r.distance ? ` | 📏 ${Math.round(r.distance)}м` : '';
+        const steps = r.steps ? ` | 👣 ${r.steps}` : '';
+        row.innerHTML = `
+            <div class="saved-left">
+                <span class="swatch" style="background:${r.color}"></span>
+                <div>
+                    <div class="lbl">${alg}</div>
+                    <div class="meta">${time}${steps}${dist}</div>
+                </div>
+            </div>
+            <div class="saved-actions">
+                <button data-alg="${alg}" class="toggle-btn btn-sm">${r.visible ? '👁️':'👁️‍🗨️'}</button>
+                <button data-alg="${alg}" class="delete-btn btn-sm">×</button>
+            </div>`;
         box.appendChild(row);
     });
     box.querySelectorAll('.toggle-btn').forEach(btn => { 
         btn.onclick = e => { 
             const alg = e.target.dataset.alg; 
             resultsStore[alg].visible = !resultsStore[alg].visible; 
-            e.target.innerText = resultsStore[alg].visible ? '👁️':'👁️‍🗨️'; 
             redrawAll(); 
+            renderSavedList();
         }; 
     });
     box.querySelectorAll('.delete-btn').forEach(btn => { 
@@ -210,18 +227,19 @@ function redrawAll() {
         if(!r.path || r.path.length === 0) continue;
         routeLayers[alg] = [];
         const latlngs = r.path.map(pt => [pt[1], pt[0]]);
-        const poly = L.polyline(latlngs, { color: r.color, weight: 5, opacity: 0.8 }).addTo(map);
-        const info = `<b>${alg}</b>${r.time ? `<br>⏱️ ${r.time}ms` : ''}${r.distance ? `<br>📏 ${Math.round(r.distance)}m` : ''}<br>👣 ${r.steps}`;
-        poly.bindPopup(info);
+        const poly = L.polyline(latlngs, { 
+            color: r.color, 
+            weight: 5, 
+            opacity: 0.8 
+        }).addTo(map);
+        poly.bindPopup(`<b>${alg}</b><br>⏱️ ${r.time}ms<br>📏 ${Math.round(r.distance)}м<br>👣 ${r.steps}`);
         routeLayers[alg].push(poly);
-        routeLayers[alg].push(L.circleMarker(latlngs[0], { radius: 7, fillColor: '#2ecc71', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map));
-        routeLayers[alg].push(L.circleMarker(latlngs[latlngs.length-1], { radius: 7, fillColor: '#e74c3c', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map));
     }
 }
 
-async function callRoute(alg, useTraffic, timeHour) {
+async function callRoute(alg, useTraffic) {
     if(markers.length < 2) { 
-        alert('⚠️ Set start and end points'); 
+        alert('⚠️ Эхлэл болон төгсгөл байхгүй'); 
         return null; 
     }
     const src = markers[0].getLatLng(), dst = markers[1].getLatLng();
@@ -230,7 +248,6 @@ async function callRoute(alg, useTraffic, timeHour) {
     params.set('dst', `${dst.lng},${dst.lat}`);
     params.set('alg', alg);
     params.set('traffic', useTraffic ? 'true' : 'false');
-    if(timeHour >= 0) params.set('time_hour', timeHour);
     const res = await fetch('/route?' + params);
     if(!res.ok) { 
         const txt = await res.text().catch(() => res.statusText); 
@@ -242,62 +259,51 @@ async function callRoute(alg, useTraffic, timeHour) {
 document.getElementById('runReplace').onclick = async () => {
     const alg = document.getElementById('algSelect').value;
     const useTraffic = document.getElementById('trafficToggle').checked;
-    const timeSelect = document.getElementById('timeSelect').value;
-    const timeHour = timeSelect === '-1' ? -1 : parseInt(timeSelect);
-    const algName = algorithmNames[alg] || alg;
-    const progressInterval = showProgress(`Running ${algName}...`);
-    document.getElementById('result').innerText = `⏳ Computing ${algName}...`;
+    const algName = alg.toUpperCase();
+    const progressInterval = showProgress(`${algName}...`);
+    document.getElementById('result').innerText = `⏳ ${algName}...`;
     try {
-        const data = await callRoute(alg, useTraffic, timeHour);
+        const data = await callRoute(alg, useTraffic);
         hideProgress(progressInterval);
         if(!data) return;
         if(data.error) { 
-            document.getElementById('result').innerHTML = `<strong style="color: #f5424e;">⚠️ Error:</strong> ${data.message || data.error}`; 
+            document.getElementById('result').innerHTML = `<strong style="color: #f5424e;">⚠️ ${data.message || data.error}</strong>`; 
             return; 
         }
-        const displayName = algorithmNames[data.algorithm] || data.algorithm;
-        const entry = { 
+        const displayName = data.algorithm;
+        resultsStore[displayName] = { 
             algorithm: displayName, 
             path: data.path, 
             steps: data.steps, 
-            distance: data.distance || null, 
-            time: data.time || null, 
-            traffic: data.traffic || false, 
+            distance: data.distance || 0, 
+            time: data.time || 0, 
             visible: true, 
-            color: colorForAlg(displayName) 
+            color: colors[displayName] || '#888' 
         };
-        resultsStore[displayName] = entry;
         renderSavedList(); 
         redrawAll(); 
         updateChart();
         markers.forEach(m => map.removeLayer(m)); 
         markers = [];
-        let msg = `<strong style="color: #4caf50;">✔</strong> ${entry.algorithm}`;
-        if(entry.time) msg += ` — ⏱️ ${entry.time}ms`;
-        if(entry.steps) msg += ` | 👣 ${entry.steps}`;
-        if(entry.distance) msg += ` | 📏 ${Math.round(entry.distance)}m`;
-        document.getElementById('result').innerHTML = msg;
+        document.getElementById('result').innerHTML = `<strong style="color: #4caf50;">✔ ${displayName}</strong> — ⏱️ ${data.time}ms | 👣 ${data.steps} | 📏 ${Math.round(data.distance)}м`;
     } catch (err) { 
         hideProgress(progressInterval); 
         alert('❌ ' + err.message); 
-        document.getElementById('result').innerHTML = `<strong style="color: #f5424e;">Error:</strong> ${err.message}`; 
+        document.getElementById('result').innerHTML = `<strong style="color: #f5424e;">Алдаа:</strong> ${err.message}`; 
     }
 };
 
 document.getElementById('compare').onclick = async () => {
     if(markers.length < 2) { 
-        alert('⚠️ Set start and end points'); 
+        alert('⚠️ Эхлэл болон төгсгөл байхгүй'); 
         return; 
     }
     const useTraffic = document.getElementById('trafficToggle').checked;
-    const timeSelect = document.getElementById('timeSelect').value;
-    const timeHour = timeSelect === '-1' ? -1 : parseInt(timeSelect);
-    const progressInterval = showProgress('⚖️ Comparing algorithms...');
-    document.getElementById('result').innerText = '⏳ Comparing...';
+    const progressInterval = showProgress('⚖️ Харьцуулж байна...');
+    document.getElementById('result').innerText = '⏳ Харьцуулалт...';
     try {
         const src = markers[0].getLatLng(), dst = markers[1].getLatLng();
-        let url = `/compare?src=${src.lng},${src.lat}&dst=${dst.lng},${dst.lat}&traffic=${useTraffic ? 'true' : 'false'}`;
-        if(timeHour >= 0) url += `&time_hour=${timeHour}`;
+        const url = `/compare?src=${src.lng},${src.lat}&dst=${dst.lng},${dst.lat}&traffic=${useTraffic ? 'true' : 'false'}`;
         const res = await fetch(url);
         hideProgress(progressInterval);
         if(!res.ok) { 
@@ -307,16 +313,14 @@ document.getElementById('compare').onclick = async () => {
         const arr = await res.json();
         for(const r of arr) {
             if(!r || r.error) continue;
-            const algName = algorithmNames[r.algorithm] || r.algorithm;
-            resultsStore[algName] = { 
-                algorithm: algName, 
+            resultsStore[r.algorithm] = { 
+                algorithm: r.algorithm, 
                 path: r.path, 
                 steps: r.steps, 
-                distance: r.distance || null, 
-                time: r.time || null, 
-                traffic: r.traffic || false, 
+                distance: r.distance || 0, 
+                time: r.time || 0, 
                 visible: true, 
-                color: colorForAlg(algName) 
+                color: colors[r.algorithm] || '#888' 
             };
         }
         markers.forEach(m => map.removeLayer(m)); 
@@ -324,12 +328,12 @@ document.getElementById('compare').onclick = async () => {
         renderSavedList(); 
         redrawAll(); 
         updateChart();
-        const times = arr.filter(r => !r.error).map(r => `${algorithmNames[r.algorithm]}: ${r.time}ms`).join(', ');
-        document.getElementById('result').innerHTML = `<strong style="color: #4caf50;">✔</strong> Comparison complete<br><small>${times}</small>`;
+        const times = arr.filter(r => !r.error).map(r => `${r.algorithm}: ${r.time}ms`).join(', ');
+        document.getElementById('result').innerHTML = `<strong style="color: #4caf50;">✔ Дууслаа</strong><br><small>${times}</small>`;
     } catch(err) { 
         hideProgress(progressInterval); 
         alert('❌ ' + err.message); 
-        document.getElementById('result').innerHTML = `<strong style="color: #f5424e;">Error:</strong> ${err.message}`; 
+        document.getElementById('result').innerHTML = `<strong style="color: #f5424e;">Алдаа:</strong> ${err.message}`; 
     }
 };
 
@@ -343,7 +347,7 @@ document.getElementById('clear').onclick = () => {
     chart.data.labels = []; 
     chart.data.datasets[0].data = []; 
     chart.update();
-    document.getElementById('result').innerText = '🗑️ Cleared';
+    document.getElementById('result').innerText = '🗑️ Цэвэрлэгдсэн';
 };
 
 renderSavedList(); 
